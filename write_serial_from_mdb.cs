@@ -71,12 +71,12 @@ namespace serialWrite
         }
         public static void lap(int lane, int mytime)
         {
-            string data = "A1" + lane + "  " + timeint2str(mytime) + "L01";
+            string data = "A1" + lane + "2 " + timeint2str(mytime) + "L01";
             send(data);
         }
         public static void goal(int lane, int mytime)
         {
-            string data = "A1" + lane + "  " + timeint2str(mytime) + "G01";
+            string data = "A1" + lane + "2 " + timeint2str(mytime) + "G01";
             send(data);
         }
         public static string timeint2str(int mytime)
