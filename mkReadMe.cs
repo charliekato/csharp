@@ -11,7 +11,7 @@ public class  SwimSys
 	string[] files=Directory.GetFiles(currentDir,"*.mdb");
 	foreach (string filename in files) {
 	    event_db evtDb = new event_db(magicWord+filename);
-	    Console.WriteLine(filename + " : " + evtDb.get_eventDate()+ "  " +evtDb.get_eventName()) ;
+	    Console.WriteLine(Path.GetFileName(filename) + " : " + evtDb.get_eventDate()+ "  " +evtDb.get_eventName()) ;
 	}
 
     }
