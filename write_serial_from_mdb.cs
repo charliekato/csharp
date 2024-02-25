@@ -22,21 +22,21 @@ namespace write_serial_from_mdb
             Application.SetCompatibleTextRenderingDefault(false);
             //Application.Run(new Form1());
            
-            serialWrite.serialSend.consoleMain();
+            serialSend.consoleMain();
            
         }
     }
-}
 
-
-
-namespace serialWrite
-{
     public static class misc
     {
+        //****************************
+        /// <summary>
+        /// MDB file picker
+        /// </summary>
+        /// <param name="initFile">Initial File Name</param>
+        /// <returns>MDB file path</returns>
         public static string get_mdb_file(string initFile)
         {
-
             OpenFileDialog ofd = new OpenFileDialog();
             ofd.FileName = initFile;
             ofd.InitialDirectory = @"C:\Users\ykato\Dropbox\Private\水泳協会\SwimDB\";
@@ -100,6 +100,22 @@ namespace serialWrite
             send(data);
             Console.WriteLine("Lane : " + lane + "着順; " + arrivalOrder + " タイム ;" + timeint2str(myTime));
         }
+        /// <summary>
+        /// time integer to time string convertion
+        /// Time interger is the following format : 
+        /// mmsscc
+        ///        where mm: two degits of minutes 
+        ///              ss: two degits of second
+        ///              cc: 1/100 sec 
+        ///  Time string format is;
+        ///    mm:ss.cc
+        ///  
+        /// Example: 
+        ///    123456 => 12:34.56
+        ///      1299 => 12.99
+        /// </summary>
+        /// <param name="mytime">time integer</param>
+        /// <returns>time string</returns>
         public static string timeint2str(int mytime)
         {
             int minutes = mytime / 10000;
@@ -112,6 +128,22 @@ namespace serialWrite
             }
             return "   " + seconds.ToString().PadLeft(2) + "." + centiseconds.ToString().PadLeft(2, '0');
         }
+        /// <summary>
+        /// time string to time interger convertion
+        /// </summary>
+        /// <param name="mytime">time string</param>
+        /// <returns>time integer</returns>
+        /// Time interger is the following format : 
+        /// mmsscc
+        ///        where mm: two degits of minutes 
+        ///              ss: two degits of second
+        ///              cc: 1/100 sec 
+        ///  Time string format is;
+        ///    mm:ss.cc
+        ///  
+        /// Example: 
+        ///    12:34.56 => 123456
+        ///       12.99 => 1299
         public static int timestr2int(string mytime)
         {
             int position;
@@ -129,6 +161,13 @@ namespace serialWrite
             return Convert.ToInt32(mytime);
         }
         [STAThread]
+
+
+        ///
+
+        //***************************
+        ///<summary>Next Entry Poing</summary>
+
         public static void consoleMain()
         {
             Application.EnableVisualStyles();
@@ -142,24 +181,20 @@ namespace serialWrite
             _serialPort.DataBits = 7;
             _serialPort.WriteTimeout = -1;
             _serialPort.Open();
-            WriteData();
+            string mdbFileName =  misc.get_mdb_file("Swim01");
+            program_db prgDB = new program_db(mdbFileName);
+            int prgNo = GetNumber("input program number==>");
+            if (prgNo==0) WriteData(prgDB);
+            int kumi = GetNumber("input kumi number==>");
+            if (kumi==0) kumi++;
+            WriteData(prgDB,prgNo,kumi);
         }
-        /*
-            public static void WriteData2()
-            {
-                string fromMDB = misc.get_mdb_file("Swim01");
-            int	prgNo;
-
-                access_db.program_db prgDB = new access_db.program_db(fromMDB);
-            int	distance;
-                for (prgNo=1; prgNo<=access_db.program_db.Get_max_program_no(); prgNo++) {
-            distance=prgDB.Get_distance(prgNo);
-            Console.WriteLine("prgno {0}  distance {1}", prgNo, distance);
-            }
-        }
-        */
-
-        public static void SendData4OneRace(string[] myTime, bool goal)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="myTime"></param>
+        /// <param name="goal"></param>
+        public static void SendData4OneRace(string[] myTime, bool[] goal)
         {
             int laneNo;
             int[] myIntTime = new int[10];
@@ -178,103 +213,56 @@ namespace serialWrite
                 {
                     vacantCount++;
                 } else 
-                send_time(laneNoArray[i], myIntTime[i], i-vacantCount, goal);
+                send_time(laneNoArray[i], myIntTime[i], i-vacantCount, goal[laneNoArray[i]]);
         
             }
             Console.WriteLine("");
             Console.WriteLine("-------------------------");
             Console.WriteLine("");
-           
         }
 
-        public static void WriteData()
-        {
-            string fromMDB = misc.get_mdb_file("Swim01");
-            access_db.program_db prgDB = new access_db.program_db(fromMDB);
-            int prgNo = 0;
-            int kumi=0;
-            int orgPrgNo;
-            int orgKumi;
-            int laneNo;
-            int lapcount;
+	public static void WriteData( program_db prgDB,  int prgNo, int kumi) {
+	    int orgPrgNo, orgKumi;
+        string[] lapTime = new string[10];
+        bool[] goalFlag = new bool[10];
+        int laneNo;
+        int lapcount;
+        int firstLaneNo ;
+	    int maxLapcount = prgDB.Get_distance(prgNo) / prgDB.Get_lap_interval();
+	    orgPrgNo = prgNo; orgKumi = kumi;
+	    for (lapcount = 1; lapcount <= maxLapcount; lapcount++)
+	    {
+            firstLaneNo = 1;
+            prgNo = orgPrgNo; kumi = orgKumi;
+            do
+            {
+                for (laneNo = firstLaneNo; laneNo <= maxLaneNo; laneNo++)
+                {
+                    lapTime[laneNo] = prgDB.get_laptime(prgNo, kumi, laneNo, lapcount);
+                    goalFlag[laneNo] = (lapcount==maxLapcount);
+                }
+                firstLaneNo = prgDB.can_go_with_next(ref prgNo, ref kumi);
+            } while (firstLaneNo>0);
+            SendData4OneRace(lapTime, goalFlag);
+            
+            Thread.Sleep(5000);
+	    }
+	    Thread.Sleep(5000);
+	}
+    public static void WriteData(program_db prgDB)
+    {
+        int prgNo = 0;
+        int kumi=0;
 //            string startdata = "AR       0.0 S  ";
-            string[] lapTime = new string[10];
-            int maxLapcount;
-            int maxKumi;
-            int firstLaneNo ;
-            maxLaneNo = prgDB.Get_max_laneNo();
+        maxLaneNo = prgDB.Get_max_laneNo();
 
-            while (prgDB.get_next_race(ref prgNo, ref kumi))
-            {
-                maxLapcount = prgDB.Get_distance(prgNo) / prgDB.Get_lap_interval();
-                orgPrgNo = prgNo; orgKumi = kumi;
-                for (lapcount = 1; lapcount <= maxLapcount; lapcount++)
-                {
-                    firstLaneNo = 1;
-                    prgNo = orgPrgNo; kumi = orgKumi;
-                    do
-                    {
-                        for (laneNo = firstLaneNo; laneNo <= maxLaneNo; laneNo++)
-                        {
-                            lapTime[laneNo] = prgDB.get_laptime(prgNo, kumi, laneNo, lapcount);
-                        }
-                        firstLaneNo = prgDB.can_go_with_next(ref prgNo, ref kumi);
-                    } while (firstLaneNo>0);
-                    SendData4OneRace(lapTime, (lapcount == maxLapcount));
-                    
-                    Thread.Sleep(5000);
-                }
-                Thread.Sleep(5000);
-            }
-
-
-            for (prgNo = 1; prgNo <= prgDB.Get_max_program_no(); prgNo++)
-            {
-                maxLapcount = prgDB.Get_distance(prgNo) / 50;
-                maxKumi = prgDB.Get_max_kumi(prgNo);
-
-                for (kumi = 1; kumi <= maxKumi; kumi++)
-                {
-                    for (lapcount = 1; lapcount <= maxLapcount; lapcount++)
-                    {
-                        for (laneNo = 1; laneNo <= maxLaneNo; laneNo++)
-                        {
-                            lapTime[laneNo] = prgDB.get_laptime(prgNo, kumi, laneNo, lapcount);
-                        }
-                    }
-
-                    //		    Thread.Sleep(10000);
-                }
-            }
-        }
-
-        /*
-        public static void WriteOrg()
+        while (prgDB.get_next_race(ref prgNo, ref kumi))
         {
-            string startdata = "AR       0.0 S  ";
-            int skip;
-            for (int i = 0; i < 10; i++)
-            {
-                skip = i % 10;
-                send(startdata);
-                for (int l = 1; l < 10; l++)
-                {
-                    if (l != skip)
-                    {
-                        lap(l, 2934 - l + i);
-                    }
-                }
-                //Thread.Sleep(2000);
-                for (int l = 1; l < 10; l++)
-                {
-                    if (l != skip)
-                        goal(l, 12345 + l + i);
-                }
-                //Thread.Sleep(2000);
-            }
-
+            WriteData(prgDB, prgNo, kumi);
         }
-        */
+    }
+
+    
         public static string SetPortName(string defaultPortName)
         {
             string portName;
@@ -294,13 +282,20 @@ namespace serialWrite
             }
             return portName;
         }
-
+        public static int GetNumber(string prompt) {
+            string PrgNoStr = Console.ReadLine();
+            int	returnNo;
+            Console.WriteLine(prompt);
+            try {
+                returnNo = Int32.Parse(PrgNoStr);
+                return returnNo;
+            } catch {
+                return 0;
+            }
+        }
     }
 
-}
 
-namespace access_db
-{
 
     public class program_db
     {
