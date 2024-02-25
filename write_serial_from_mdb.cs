@@ -182,12 +182,18 @@ namespace write_serial_from_mdb
             _serialPort.WriteTimeout = -1;
             _serialPort.Open();
             string mdbFileName =  misc.get_mdb_file("Swim01");
-            program_db prgDB = new program_db(mdbFileName);
-            int prgNo = GetNumber("input program number==>");
-            if (prgNo==0) WriteData(prgDB);
-            int kumi = GetNumber("input kumi number==>");
-            if (kumi==0) kumi++;
-            WriteData(prgDB,prgNo,kumi);
+	    while (true) {
+		program_db prgDB = new program_db(mdbFileName);
+		int prgNo = GetNumber("input program number==>");
+		maxLaneNo = prgDB.Get_max_laneNo();
+		if (prgNo==0) { 
+		    WriteData(prgDB);
+		    break;
+		}
+		int kumi = GetNumber("input kumi number==>");
+		if (kumi==0) kumi++;
+		WriteData(prgDB,prgNo,kumi);
+	    }
         }
         /// <summary>
         /// 
@@ -215,6 +221,7 @@ namespace write_serial_from_mdb
                 } else 
                 send_time(laneNoArray[i], myIntTime[i], i-vacantCount, goal[laneNoArray[i]]);
         
+		Thread.Sleep(500);
             }
             Console.WriteLine("");
             Console.WriteLine("-------------------------");
@@ -232,20 +239,20 @@ namespace write_serial_from_mdb
 	    orgPrgNo = prgNo; orgKumi = kumi;
 	    for (lapcount = 1; lapcount <= maxLapcount; lapcount++)
 	    {
-            firstLaneNo = 1;
-            prgNo = orgPrgNo; kumi = orgKumi;
-            do
-            {
-                for (laneNo = firstLaneNo; laneNo <= maxLaneNo; laneNo++)
-                {
-                    lapTime[laneNo] = prgDB.get_laptime(prgNo, kumi, laneNo, lapcount);
-                    goalFlag[laneNo] = (lapcount==maxLapcount);
-                }
-                firstLaneNo = prgDB.can_go_with_next(ref prgNo, ref kumi);
-            } while (firstLaneNo>0);
-            SendData4OneRace(lapTime, goalFlag);
-            
-            Thread.Sleep(5000);
+		firstLaneNo = 1;
+		prgNo = orgPrgNo; kumi = orgKumi;
+		do
+		{
+		    for (laneNo = firstLaneNo; laneNo <= maxLaneNo; laneNo++)
+		    {
+			lapTime[laneNo] = prgDB.get_laptime(prgNo, kumi, laneNo, lapcount);
+			goalFlag[laneNo] = (lapcount==maxLapcount);
+		    }
+		    firstLaneNo = prgDB.can_go_with_next(ref prgNo, ref kumi);
+		} while (firstLaneNo>0);
+		SendData4OneRace(lapTime, goalFlag);
+		
+		Thread.Sleep(5000);
 	    }
 	    Thread.Sleep(5000);
 	}
@@ -254,7 +261,6 @@ namespace write_serial_from_mdb
         int prgNo = 0;
         int kumi=0;
 //            string startdata = "AR       0.0 S  ";
-        maxLaneNo = prgDB.Get_max_laneNo();
 
         while (prgDB.get_next_race(ref prgNo, ref kumi))
         {
@@ -283,9 +289,9 @@ namespace write_serial_from_mdb
             return portName;
         }
         public static int GetNumber(string prompt) {
+            Console.Write(prompt);
             string PrgNoStr = Console.ReadLine();
             int	returnNo;
-            Console.WriteLine(prompt);
             try {
                 returnNo = Int32.Parse(PrgNoStr);
                 return returnNo;
