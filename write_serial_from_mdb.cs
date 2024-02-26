@@ -94,7 +94,7 @@ namespace write_serial_from_mdb
         }
         public static void send_time(int lane, int myTime, int arrivalOrder, bool goal)
         {
-            string data = "A1" + lane + arrivalOrder + timeint2str(myTime);
+            string data = "A1" + lane + arrivalOrder +" "+ timeint2str(myTime); /*<*/
             if (goal) data += "G01";
             else data += "L01";
             send(data);
